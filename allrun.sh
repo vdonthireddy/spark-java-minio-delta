@@ -18,6 +18,4 @@ mvn clean package
 
 # submit the jar file to spark (make sure to use the jar-with-dependencies)
 cd ~/code/spark-3.5.5-bin-hadoop3/
-#./bin/spark-submit --class=com.niharsystems.Main /Users/donthireddy/code/mygit/databricks-simple/target/databricks-simple-1.0-SNAPSHOT-jar-with-dependencies.jar
-spark-submit --jars /Users/donthireddy/code/mygit/databricks-simple/libs/delta-core_2.12-2.4.0.jar,/Users/donthireddy/code/mygit/databricks-simple/libs/delta-storage-2.4.0.jar,/Users/donthireddy/code/mygit/databricks-simple/libs/hadoop-aws-3.3.4.jar,/Users/donthireddy/code/mygit/databricks-simple/libs/aws-java-sdk-bundle-1.12.533.jar --class=com.niharsystems.Main /Users/donthireddy/code/mygit/databricks-simple/target/databricks-simple-1.0-SNAPSHOT-jar-with-dependencies.jar
-
+spark-submit --jars /Users/donthireddy/code/mygit/databricks-simple/libs/delta-spark_2.12-3.3.0.jar --class=com.niharsystems.Main /Users/donthireddy/code/mygit/databricks-simple/target/databricks-simple-1.0-SNAPSHOT-jar-with-dependencies.jar
