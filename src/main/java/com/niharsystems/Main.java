@@ -3,10 +3,7 @@ package com.niharsystems;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
-
 import java.util.*;
-import java.util.Map;
-
 import io.delta.tables.*;
 
 public class Main {
@@ -18,12 +15,8 @@ public class Main {
         SparkSession spark = SparkSession.builder()
                 .appName("Simple Spark Example")
                 .master("local[*]")
-                .config("spark.jars.packages", "org.apache.hadoop:hadoop-azure:3.3.4")
                 .config("spark.jars.packages", "io.delta:delta-spark_2.12:3.3.0")
-                .config("spark.jars.packages", "io.delta:delta-sharing-spark_2.12:3.3.0")
-                .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
                 .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-                .config("spark.delta.logStore.class", "org.apache.spark.sql.delta.storage.S3SingleDriverLogStore")
                 .config("spark.hadoop.fs.s3a.endpoint", "http://localhost:9000")
                 .config("spark.hadoop.fs.s3a.access.key", "2nZqqHPWEzu9JooKNoXO")
                 .config("spark.hadoop.fs.s3a.secret.key", "DfFaWePTJsp5mB50pS2a7Iz00A6AgJEmdXWGyIOx")
@@ -31,7 +24,6 @@ public class Main {
                 .config("spark.hadoop.fs.s3a.path.style.access", "true")
                 .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
                 .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
-                .config("spark.sql.warehouse.dir", "s3a://" + deltaTablePath + "/spark-warehouse")
                 .getOrCreate();
 
         //Read data from some json file
@@ -58,7 +50,6 @@ public class Main {
         //Write the data to minio in Delta format
         df.write()
                 .format("delta")
-//                .option("delta.compatibility.symlinkFormatManifest.enabled", "true")
                 .mode("append")  // Can be "append" for adding new data
                 .save("s3a://" + deltaTablePath + "/test-"+ timeNow);
 

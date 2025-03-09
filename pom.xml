@@ -40,21 +40,6 @@
             <artifactId>delta-spark_2.12</artifactId>
             <version>${delta.version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.delta</groupId>
-            <artifactId>delta-sharing-spark_2.12</artifactId>
-            <version>${delta.version}</version>
-        </dependency>
-<!--        <dependency>-->
-<!--            <groupId>com.amazonaws</groupId>-->
-<!--            <artifactId>aws-java-sdk-bundle</artifactId>-->
-<!--            <version>${aws.sdk.version}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>io.delta</groupId>-->
-<!--            <artifactId>delta-storage</artifactId>-->
-<!--            <version>${delta.version}</version>-->
-<!--        </dependency>-->
     </dependencies>
     <build>
         <plugins>
