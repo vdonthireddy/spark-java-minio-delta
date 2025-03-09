@@ -1,20 +1,18 @@
 package com.niharsystems;
 
-import org.apache.arrow.flatbuf.Bool;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import java.util.*;
 import io.delta.tables.*;
-import org.apache.spark.sql.functions;
 
 public class Main {
     public static void main(String[] args) {
-        String deltaTablePath = "vj-bucket";
-        String timeNow = "abcd1234";//LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        String randomString = "";//RandomStringUtils.randomAlphabetic(4);
-        Boolean isInsert = false;
-        Boolean isUpdate = !isInsert;
+        String deltaTableBucket = "s3a://vj-bucket";
+        String deltaTablePath = deltaTableBucket+"/delta-table";
+        Boolean onlyDisplay = false;
+        Boolean isInsert = !onlyDisplay && false;
+        Boolean isUpdate = !onlyDisplay && !isInsert;
         // Create a SparkSession
         SparkSession spark = SparkSession.builder()
                 .appName("Simple Spark Example")
@@ -31,16 +29,16 @@ public class Main {
                 .getOrCreate();
 
         //Read data from some json file
-        Dataset<Row> df1 = spark.read().option("multiline", "true").json("s3a://vj-bucket/sample.json");
+        Dataset<Row> df1 = spark.read().option("multiline", "true").json(deltaTableBucket+"/sample.json");
         df1.printSchema();
         df1.select("user.address.zip").show();
 
         //Create dataset
         List<Row> data = Arrays.asList(
-                RowFactory.create(1,"Vijay Donthireddy-"+randomString, 50, "Engineering-"+randomString, false),
-                RowFactory.create(2,"Kavitha Padera-"+randomString, 47, "Manager-"+randomString, false),
-                RowFactory.create(3,"Nihar Donthireddy-"+randomString, 18, "College-"+randomString, false),
-                RowFactory.create(4,"Nirav Donthireddy-"+randomString, 12, "Middleschool-"+randomString, false)
+                RowFactory.create(1,"Vijay Donthireddy", 50, "Engineering", false),
+                RowFactory.create(2,"Kavitha Padera", 47, "Manager", false),
+                RowFactory.create(3,"Nihar Donthireddy", 18, "College", false),
+                RowFactory.create(4,"Nirav Donthireddy", 12, "Middleschool", false)
         );
         //Create schema for the above dataset
         StructType schema1 = new StructType()
@@ -52,36 +50,51 @@ public class Main {
 
         Dataset<Row> dfRead;
 
+        if (onlyDisplay){
+            dfRead = spark.read()
+                    .format("delta")
+                    .load(deltaTablePath)
+                    .orderBy("id");
+//            dfRead = spark.sql("SELECT * FROM delta.`"+deltaTablePath+"`");
+            dfRead.show();
+        }
+
         if (isInsert) {
             //Create Dataset object from the List above
             Dataset<Row> df = spark.createDataFrame(data, schema1);
+            System.out.println("Vijay Schema:");
+            df.printSchema();
 
             //Write the data to minio in Delta format
             df.write()
                     .format("delta")
                     .mode("append")  // Can be "append" for adding new data
-                    .save("s3a://" + deltaTablePath + "/test-" + timeNow);
+                    .partitionBy("id") //in minio if you open the delta-table folder, you can see the files organized by folders with values of 'id' column
+                    .save(deltaTablePath);
 
             //Read data from minio
             dfRead = spark.read()
                     .format("delta")
-                    .load("s3a://" + deltaTablePath + "/test-" + timeNow);
+                    .load(deltaTablePath);
             dfRead.show();
         }
         if (isUpdate) {
             //Read the final data
             dfRead = spark.read()
                     .format("delta")
-                    .load("s3a://" + deltaTablePath + "/test-" + timeNow);
+                    .load(deltaTablePath);
+            dfRead.orderBy("id");
             dfRead.show();
 
-            DeltaTable dtPeople = DeltaTable.forPath(spark, "s3a://" + deltaTablePath + "/test-" + timeNow);
+            DeltaTable dtPeople = DeltaTable.forPath(spark, deltaTablePath);
 
             // Create a DataFrame with the new data
             List<Row> nd = Arrays.asList(
-                    RowFactory.create(1,"Vijay Donthireddy-"+randomString, 49, "Engineering-"+randomString, false),
-                    RowFactory.create(2,"Kavitha Padera-"+randomString, 47, "Manager-"+randomString, true),
-                    RowFactory.create(5,"Nirvana Donthireddy-"+randomString, 0, "College-"+randomString, false)
+                    RowFactory.create(1,"Vijay Donthireddy", 49, "Engineering", true),
+                    RowFactory.create(2,"Kavitha Padera", 47, "Manager", true),
+                    RowFactory.create(5,"Nirvana Donthireddy", 10, "College", false),
+                    RowFactory.create(3,"Nihar Donthireddy", 20, "UCI", false),
+                    RowFactory.create(6,"new Dummy Donthireddy", 20, "UCI", false)
             );
             Dataset<Row> newData = spark.createDataFrame(nd, schema1);
             // Perform the update operation
@@ -99,13 +112,27 @@ public class Main {
             mapInsert.put("department", "newData.department");
             mapInsert.put("isdeleted", "newData.isdeleted");
 
-            //Update the delta lake with merge
+            //NOTE: The following commented code is NOT working. That's why it's commented. I do NOT know how to delete the data from delta table
+//            //Update the delta lake with merge
+//            dtPeople.as("oldData")
+//                    .merge(
+//                            newData.as("newData"),
+//                            "oldData.id = newData.id")
+//                    .whenMatched("newData.isdeleted = true")
+//                    .delete()
+//                    .execute();
+//
+//            System.out.println("Vijay After deleted:");
+//            dfRead = spark.read()
+//                    .format("delta")
+//                    .load(deltaTablePath);
+//            dfRead.orderBy("id");
+//            dfRead.show();
+
             dtPeople.as("oldData")
                     .merge(
                             newData.as("newData"),
                             "oldData.id = newData.id")
-                    .whenMatched("newData.isdeleted = true")
-                    .delete()
                     .whenMatched()
                     .updateExpr(mapUpdate)
                     .whenNotMatched()
@@ -113,22 +140,13 @@ public class Main {
                     .execute();
 
             //Read the final data
+            System.out.println("Vijay After updated:");
             dfRead = spark.read()
                     .format("delta")
-                    .load("s3a://" + deltaTablePath + "/test-" + timeNow);
+                    .load(deltaTablePath);
+            dfRead.orderBy("id");
             dfRead.show();
         }
-//        dtPeople.delete(functions.col("age") > 80);
-//        DeltaTable dtPeopleDelete = DeltaTable.forPath(spark, "s3a://" + deltaTablePath + "/test-"+ timeNow);
-//        String deleteCondition = "age = 89";
-//        dtPeopleDelete.delete(deleteCondition);//new Column("age").gt(75));
-//        spark.sql("delete from `test-abcd1234` where age=89");
-
-        //Read the final data
-        dfRead = spark.read()
-                .format("delta")
-                .load("s3a://" + deltaTablePath + "/test-"+ timeNow);
-        dfRead.show();
         //stop spark job
         spark.stop();
     }
