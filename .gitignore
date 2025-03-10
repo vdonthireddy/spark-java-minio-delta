@@ -66,3 +66,5 @@ Desktop.ini
 spark-warehouse/
 metastore_db/
 derby.log
+
+!libs/delta-spark_2.12-3.3.0.jar
