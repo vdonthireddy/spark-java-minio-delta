@@ -205,4 +205,3 @@ Potential improvements:
 3. Add data validation
 4. Include more Delta Lake features
 5. Add monitoring and logging # spark-scala-minio-delta
-# spark-java-minio-delta
